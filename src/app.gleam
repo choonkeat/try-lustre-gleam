@@ -59,7 +59,9 @@ pub fn view(model: Model) -> element.Element(Msg) {
     html.div(
       [],
       list.map(model.cats, fn(cat) {
-        html.img([attribute.src("https://cataas.com/cat/" <> cat)])
+        html.li([], [
+          html.img([attribute.src("https://cataas.com/cat/" <> cat)]),
+        ])
       }),
     ),
   ])

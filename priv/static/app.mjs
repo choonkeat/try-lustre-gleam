@@ -2623,6 +2623,9 @@ function start2(app, selector, flags) {
 function div(attrs, children2) {
   return element("div", attrs, children2);
 }
+function li(attrs, children2) {
+  return element("li", attrs, children2);
+}
 function img(attrs) {
   return element("img", attrs, toList([]));
 }
@@ -3314,8 +3317,13 @@ function view(model) {
         map2(
           model.cats,
           (cat) => {
-            return img(
-              toList([src("https://cataas.com/cat/" + cat)])
+            return li(
+              toList([]),
+              toList([
+                img(
+                  toList([src("https://cataas.com/cat/" + cat)])
+                )
+              ])
             );
           }
         )
