@@ -2620,6 +2620,9 @@ function start2(app, selector, flags) {
 }
 
 // build/dev/javascript/lustre/lustre/element/html.mjs
+function h1(attrs, children2) {
+  return element("h1", attrs, children2);
+}
 function div(attrs, children2) {
   return element("div", attrs, children2);
 }
@@ -3247,12 +3250,20 @@ function expect_json(decoder, to_msg) {
   );
 }
 
+// build/dev/javascript/app/ffi.mjs
+function read(key) {
+  console.log("ffi.mjs: read", key);
+  const value = window.localStorage.getItem(key);
+  return value ? new Ok(value) : new Error(void 0);
+}
+
 // build/dev/javascript/app/app.mjs
 var Model2 = class extends CustomType {
-  constructor(count, cats) {
+  constructor(count, cats, str) {
     super();
     this.count = count;
     this.cats = cats;
+    this.str = str;
   }
 };
 var Increment = class extends CustomType {
@@ -3269,8 +3280,14 @@ var ApiReturnedCat = class extends CustomType {
     this[0] = x0;
   }
 };
+var ReadLocalStorage = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 function init2(_) {
-  return [new Model2(0, toList([])), none()];
+  return [new Model2(0, toList([]), "<none>"), none()];
 }
 function get_cat() {
   let decoder = field("_id", string);
@@ -3282,27 +3299,12 @@ function get_cat() {
   );
   return get2("https://cataas.com/cat?json=true", expect);
 }
-function update(model, msg) {
-  if (msg instanceof Increment) {
-    let n = msg[0];
-    return [model.withFields({ count: model.count + n }), get_cat()];
-  } else if (msg instanceof Decrement) {
-    return [model.withFields({ count: model.count - 1 }), none()];
-  } else if (msg instanceof ApiReturnedCat && msg[0].isOk()) {
-    let cat = msg[0][0];
-    return [
-      model.withFields({ cats: prepend(cat, model.cats) }),
-      none()
-    ];
-  } else {
-    return [model, none()];
-  }
-}
 function view(model) {
   let count = to_string2(model.count);
   return div(
     toList([]),
     toList([
+      h1(toList([]), toList([text(model.str)])),
       button(
         toList([on_click(new Increment(3))]),
         toList([text("+")])
@@ -3330,6 +3332,51 @@ function view(model) {
       )
     ])
   );
+}
+function read2(key, to_msg) {
+  return from(
+    (dispatch) => {
+      let _pipe = read(key);
+      let _pipe$1 = to_msg(_pipe);
+      return dispatch(_pipe$1);
+    }
+  );
+}
+function update(model, msg) {
+  if (msg instanceof Increment) {
+    let n = msg[0];
+    return [
+      model.withFields({ count: model.count + n }),
+      (() => {
+        let $ = model.count + n < 9;
+        if ($) {
+          return read2(
+            to_string2(model.count + n),
+            (var0) => {
+              return new ReadLocalStorage(var0);
+            }
+          );
+        } else {
+          return get_cat();
+        }
+      })()
+    ];
+  } else if (msg instanceof Decrement) {
+    return [model.withFields({ count: model.count - 1 }), none()];
+  } else if (msg instanceof ApiReturnedCat && msg[0].isOk()) {
+    let cat = msg[0][0];
+    return [
+      model.withFields({ cats: prepend(cat, model.cats) }),
+      none()
+    ];
+  } else if (msg instanceof ApiReturnedCat && !msg[0].isOk()) {
+    return [model, none()];
+  } else if (msg instanceof ReadLocalStorage && msg[0].isOk()) {
+    let str = msg[0][0];
+    return [model.withFields({ str }), none()];
+  } else {
+    return [model.withFields({ str: "Error!" }), none()];
+  }
 }
 function main() {
   let app = application(init2, update, view);
